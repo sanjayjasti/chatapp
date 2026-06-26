@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
 const socket = io("http://localhost:5000");
@@ -6,6 +6,7 @@ const socket = io("http://localhost:5000");
 function App() {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/messages")
@@ -26,6 +27,11 @@ function App() {
       socket.off("receive_message");
     };
   }, []);
+
+  // Auto scroll to latest message
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
 
   const sendMessage = () => {
     if (message.trim() === "") return;
@@ -102,6 +108,8 @@ function App() {
               </div>
             </div>
           ))}
+
+          <div ref={chatEndRef}></div>
         </div>
 
         <div
