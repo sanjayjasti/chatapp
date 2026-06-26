@@ -8,6 +8,12 @@ function App() {
   const [chat, setChat] = useState([]);
 
   useEffect(() => {
+    fetch("http://localhost:5000/messages")
+      .then((res) => res.json())
+      .then((data) => {
+        setChat(data.map((msg) => ({ text: msg.text, mine: false })));
+      });
+
     socket.on("connect", () => {
       console.log("Connected:", socket.id);
     });
@@ -24,7 +30,12 @@ function App() {
   const sendMessage = () => {
     if (message.trim() === "") return;
 
-    socket.emit("send_message", message);
+    const messageData = {
+      text: message,
+      mine: true,
+    };
+
+    socket.emit("send_message", messageData);
     setMessage("");
   };
 
@@ -49,7 +60,6 @@ function App() {
           flexDirection: "column",
         }}
       >
-        {/* Header */}
         <div
           style={{
             padding: "20px",
@@ -57,14 +67,11 @@ function App() {
             color: "white",
             fontSize: "24px",
             fontWeight: "bold",
-            borderTopLeftRadius: "15px",
-            borderTopRightRadius: "15px",
           }}
         >
           Real-Time Chat
         </div>
 
-        {/* Chat Messages */}
         <div
           style={{
             flex: 1,
@@ -77,27 +84,26 @@ function App() {
             <div
               key={index}
               style={{
-                marginBottom: "10px",
                 display: "flex",
-                justifyContent: "flex-end",
+                justifyContent: msg.mine ? "flex-end" : "flex-start",
+                marginBottom: "10px",
               }}
             >
               <div
                 style={{
-                  background: "#4f46e5",
-                  color: "white",
+                  background: msg.mine ? "#4f46e5" : "#d1d5db",
+                  color: msg.mine ? "white" : "black",
                   padding: "10px 15px",
                   borderRadius: "15px",
                   maxWidth: "70%",
                 }}
               >
-                {msg}
+                {msg.text}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Input Area */}
         <div
           style={{
             display: "flex",
