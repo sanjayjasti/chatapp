@@ -29,22 +29,112 @@ function App() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Real-Time Chat App</h1>
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#f0f2f5",
+      }}
+    >
+      <div
+        style={{
+          width: "450px",
+          height: "600px",
+          background: "white",
+          borderRadius: "15px",
+          boxShadow: "0 0 20px rgba(0,0,0,0.2)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: "20px",
+            background: "#4f46e5",
+            color: "white",
+            fontSize: "24px",
+            fontWeight: "bold",
+            borderTopLeftRadius: "15px",
+            borderTopRightRadius: "15px",
+          }}
+        >
+          Real-Time Chat
+        </div>
 
-      <input
-        type="text"
-        value={message}
-        placeholder="Type message..."
-        onChange={(e) => setMessage(e.target.value)}
-      />
+        {/* Chat Messages */}
+        <div
+          style={{
+            flex: 1,
+            padding: "15px",
+            overflowY: "auto",
+            background: "#f9fafb",
+          }}
+        >
+          {chat.map((msg, index) => (
+            <div
+              key={index}
+              style={{
+                marginBottom: "10px",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  background: "#4f46e5",
+                  color: "white",
+                  padding: "10px 15px",
+                  borderRadius: "15px",
+                  maxWidth: "70%",
+                }}
+              >
+                {msg}
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <button onClick={sendMessage}>Send</button>
+        {/* Input Area */}
+        <div
+          style={{
+            display: "flex",
+            padding: "15px",
+            borderTop: "1px solid #ddd",
+          }}
+        >
+          <input
+            type="text"
+            value={message}
+            placeholder="Type message..."
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "10px",
+              border: "1px solid #ccc",
+              outline: "none",
+            }}
+          />
 
-      <div style={{ marginTop: "20px" }}>
-        {chat.map((msg, index) => (
-          <p key={index}>{msg}</p>
-        ))}
+          <button
+            onClick={sendMessage}
+            style={{
+              marginLeft: "10px",
+              padding: "12px 20px",
+              background: "#4f46e5",
+              color: "white",
+              border: "none",
+              borderRadius: "10px",
+              cursor: "pointer",
+            }}
+          >
+            Send
+          </button>
+        </div>
       </div>
     </div>
   );
