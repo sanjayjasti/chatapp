@@ -4,16 +4,23 @@ import { io } from "socket.io-client";
 const socket = io("http://localhost:5000");
 
 function App() {
+  const [username] = useState("Sanju"); // Temporary username
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
-  const [typing, setTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState("");
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/messages")
       .then((res) => res.json())
       .then((data) => {
-        setChat(data.map((msg) => ({ text: msg.text, mine: false })));
+        setChat(
+          data.map((msg) => ({
+            sender: msg.sender || "Unknown",
+            text: msg.text,
+            mine: msg.sender === username,
+          }))
+        );
       });
 
     socket.on("connect", () => {
@@ -21,16 +28,23 @@ function App() {
     });
 
     socket.on("receive_message", (data) => {
-      setChat((prev) => [...prev, data]);
-      setTyping(false);
+      setChat((prev) => [
+        ...prev,
+        {
+          sender: data.sender || "Unknown",
+          text: data.text || "",
+          mine: data.sender === username,
+        },
+      ]);
+      setTypingUser("");
     });
 
-    socket.on("show_typing", () => {
-      setTyping(true);
+    socket.on("show_typing", (name) => {
+      setTypingUser(name);
     });
 
     socket.on("hide_typing", () => {
-      setTyping(false);
+      setTypingUser("");
     });
 
     return () => {
@@ -38,16 +52,17 @@ function App() {
       socket.off("show_typing");
       socket.off("hide_typing");
     };
-  }, []);
+  }, [username]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat, typing]);
+  }, [chat, typingUser]);
 
   const sendMessage = () => {
     if (message.trim() === "") return;
 
     const messageData = {
+      sender: username,
       text: message,
       mine: true,
     };
@@ -61,7 +76,7 @@ function App() {
     setMessage(e.target.value);
 
     if (e.target.value.length > 0) {
-      socket.emit("typing");
+      socket.emit("typing", username);
     } else {
       socket.emit("stop_typing");
     }
@@ -126,14 +141,16 @@ function App() {
                   maxWidth: "70%",
                 }}
               >
+                <small>{msg.sender}</small>
+                <br />
                 {msg.text}
               </div>
             </div>
           ))}
 
-          {typing && (
+          {typingUser && (
             <p style={{ fontStyle: "italic", color: "gray" }}>
-              Someone is typing...
+              {typingUser} is typing...
             </p>
           )}
 

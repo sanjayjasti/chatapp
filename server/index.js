@@ -45,18 +45,36 @@ io.on("connection", (socket) => {
   socket.on("send_message", async (data) => {
     console.log("Message received:", data);
 
-    const newMessage = new Message({
-      text: data.text,
-    });
+    const sender = typeof data.sender === "string" && data.sender.trim() ? data.sender.trim() : "Anonymous";
+    const text =
+      typeof data.text === "string"
+        ? data.text.trim()
+        : data.text && typeof data.text.text === "string"
+        ? data.text.text.trim()
+        : "";
 
-    await newMessage.save();
+    if (!text) {
+      console.warn("Ignored invalid message payload:", data);
+      return;
+    }
 
-    io.emit("receive_message", data);
+    try {
+      const newMessage = new Message({ sender, text });
+      await newMessage.save();
+
+      io.emit("receive_message", {
+        sender,
+        text,
+        createdAt: newMessage.createdAt,
+      });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
   });
 
   // Typing indicator ON
-  socket.on("typing", () => {
-    socket.broadcast.emit("show_typing");
+  socket.on("typing", (username) => {
+    socket.broadcast.emit("show_typing", username);
   });
 
   // Typing indicator OFF
