@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/authRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 const Message = require("./models/Message");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -20,6 +21,7 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/messages", messageRoutes);
 
 // MongoDB connection
 mongoose
