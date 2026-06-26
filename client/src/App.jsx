@@ -6,6 +6,7 @@ const socket = io("http://localhost:5000");
 function App() {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
+  const [typing, setTyping] = useState(false);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -21,17 +22,27 @@ function App() {
 
     socket.on("receive_message", (data) => {
       setChat((prev) => [...prev, data]);
+      setTyping(false);
+    });
+
+    socket.on("show_typing", () => {
+      setTyping(true);
+    });
+
+    socket.on("hide_typing", () => {
+      setTyping(false);
     });
 
     return () => {
       socket.off("receive_message");
+      socket.off("show_typing");
+      socket.off("hide_typing");
     };
   }, []);
 
-  // Auto scroll to latest message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+  }, [chat, typing]);
 
   const sendMessage = () => {
     if (message.trim() === "") return;
@@ -42,7 +53,18 @@ function App() {
     };
 
     socket.emit("send_message", messageData);
+    socket.emit("stop_typing");
     setMessage("");
+  };
+
+  const handleTyping = (e) => {
+    setMessage(e.target.value);
+
+    if (e.target.value.length > 0) {
+      socket.emit("typing");
+    } else {
+      socket.emit("stop_typing");
+    }
   };
 
   return (
@@ -109,6 +131,12 @@ function App() {
             </div>
           ))}
 
+          {typing && (
+            <p style={{ fontStyle: "italic", color: "gray" }}>
+              Someone is typing...
+            </p>
+          )}
+
           <div ref={chatEndRef}></div>
         </div>
 
@@ -123,7 +151,7 @@ function App() {
             type="text"
             value={message}
             placeholder="Type message..."
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleTyping}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             style={{
               flex: 1,

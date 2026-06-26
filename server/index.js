@@ -45,15 +45,23 @@ io.on("connection", (socket) => {
   socket.on("send_message", async (data) => {
     console.log("Message received:", data);
 
-    // Save ONLY text to MongoDB
     const newMessage = new Message({
       text: data.text,
     });
 
     await newMessage.save();
 
-    // Send message to all connected users
     io.emit("receive_message", data);
+  });
+
+  // Typing indicator ON
+  socket.on("typing", () => {
+    socket.broadcast.emit("show_typing");
+  });
+
+  // Typing indicator OFF
+  socket.on("stop_typing", () => {
+    socket.broadcast.emit("hide_typing");
   });
 
   socket.on("disconnect", () => {
@@ -63,7 +71,6 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-// IMPORTANT: server.listen instead of app.listen
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
