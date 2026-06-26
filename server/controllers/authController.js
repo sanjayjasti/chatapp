@@ -27,7 +27,7 @@ const signup = async (req, res) => {
 
     res.status(201).json({
       message: "User created successfully",
-      user,
+      user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar },
     });
   } catch (error) {
     res.status(500).json({
@@ -41,7 +41,6 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check user exists or not
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -50,7 +49,6 @@ const login = async (req, res) => {
       });
     }
 
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -59,17 +57,16 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id },
-      "secretkey",
+      { userId: user._id, name: user.name },
+      process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     res.status(200).json({
       message: "Login successful",
       token,
-      user,
+      user: { _id: user._id, name: user.name, email: user.email, avatar: user.avatar },
     });
   } catch (error) {
     res.status(500).json({

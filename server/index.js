@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const Message = require("./models/Message");
@@ -11,50 +12,72 @@ require("dotenv").config();
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO setup
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const MONGO_URI = process.env.MONGO_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!MONGO_URI) {
+  console.error(
+    "Missing MONGO_URI in server/.env. Add a valid MongoDB connection string to MONGO_URI and restart."
+  );
+  process.exit(1);
+}
+
+if (!JWT_SECRET) {
+  console.error(
+    "Missing JWT_SECRET in server/.env. Add a JWT_SECRET value and restart."
+  );
+  process.exit(1);
+}
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: CLIENT_URL,
   },
 });
 
-app.use(cors());
+app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/messages", messageRoutes);
 
-// MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected Successfully");
   })
   .catch((error) => {
     console.log("MongoDB Error:", error);
+    process.exit(1);
   });
 
 app.get("/", (req, res) => {
   res.send("Chat server running...");
 });
 
-// Socket connection
+// Verify the JWT on every socket connection so usernames can't be faked
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error("No token provided"));
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.username = decoded.name;
+    next();
+  } catch (err) {
+    next(new Error("Invalid or expired token"));
+  }
+});
+
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("User connected:", socket.username, socket.id);
 
-  // Receive message from frontend
   socket.on("send_message", async (data) => {
-    console.log("Message received:", data);
-
-    const sender = typeof data.sender === "string" && data.sender.trim() ? data.sender.trim() : "Anonymous";
-    const text =
-      typeof data.text === "string"
-        ? data.text.trim()
-        : data.text && typeof data.text.text === "string"
-        ? data.text.text.trim()
-        : "";
+    const sender = socket.username;
+    const text = typeof data.text === "string" ? data.text.trim() : "";
 
     if (!text) {
-      console.warn("Ignored invalid message payload:", data);
+      console.warn("Ignored empty message from:", sender);
       return;
     }
 
@@ -72,18 +95,16 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Typing indicator ON
-  socket.on("typing", (username) => {
-    socket.broadcast.emit("show_typing", username);
+  socket.on("typing", () => {
+    socket.broadcast.emit("show_typing", socket.username);
   });
 
-  // Typing indicator OFF
   socket.on("stop_typing", () => {
     socket.broadcast.emit("hide_typing");
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("User disconnected:", socket.username, socket.id);
   });
 });
 
