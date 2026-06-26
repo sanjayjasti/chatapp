@@ -45,9 +45,9 @@ io.on("connection", (socket) => {
   socket.on("send_message", async (data) => {
     console.log("Message received:", data);
 
-    // Save message to MongoDB
+    // Save ONLY text to MongoDB
     const newMessage = new Message({
-      text: data,
+      text: data.text,
     });
 
     await newMessage.save();
