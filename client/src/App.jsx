@@ -4,13 +4,18 @@ import { io } from "socket.io-client";
 const socket = io("http://localhost:5000");
 
 function App() {
-  const [username] = useState("Sanju"); // Temporary username
+  const [username, setUsername] = useState(
+    localStorage.getItem("chatUser") || ""
+  );
+  const [tempName, setTempName] = useState("");
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
   const [typingUser, setTypingUser] = useState("");
   const chatEndRef = useRef(null);
 
   useEffect(() => {
+    if (!username) return;
+
     fetch("http://localhost:5000/messages")
       .then((res) => res.json())
       .then((data) => {
@@ -23,16 +28,12 @@ function App() {
         );
       });
 
-    socket.on("connect", () => {
-      console.log("Connected:", socket.id);
-    });
-
     socket.on("receive_message", (data) => {
       setChat((prev) => [
         ...prev,
         {
-          sender: data.sender || "Unknown",
-          text: data.text || "",
+          sender: data.sender,
+          text: data.text,
           mine: data.sender === username,
         },
       ]);
@@ -58,13 +59,18 @@ function App() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, typingUser]);
 
+  const joinChat = () => {
+    if (!tempName.trim()) return;
+    localStorage.setItem("chatUser", tempName);
+    setUsername(tempName);
+  };
+
   const sendMessage = () => {
     if (message.trim() === "") return;
 
     const messageData = {
       sender: username,
       text: message,
-      mine: true,
     };
 
     socket.emit("send_message", messageData);
@@ -81,6 +87,26 @@ function App() {
       socket.emit("stop_typing");
     }
   };
+
+  if (!username) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "100px" }}>
+        <h2>Enter Username</h2>
+        <input
+          value={tempName}
+          onChange={(e) => setTempName(e.target.value)}
+          placeholder="Your name"
+          style={{ padding: "10px" }}
+        />
+        <button
+          onClick={joinChat}
+          style={{ marginLeft: "10px", padding: "10px" }}
+        >
+          Join Chat
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -112,17 +138,10 @@ function App() {
             fontWeight: "bold",
           }}
         >
-          Real-Time Chat
+          Real-Time Chat ({username})
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            padding: "15px",
-            overflowY: "auto",
-            background: "#f9fafb",
-          }}
-        >
+        <div style={{ flex: 1, padding: "15px", overflowY: "auto" }}>
           {chat.map((msg, index) => (
             <div
               key={index}
@@ -138,7 +157,6 @@ function App() {
                   color: msg.mine ? "white" : "black",
                   padding: "10px 15px",
                   borderRadius: "15px",
-                  maxWidth: "70%",
                 }}
               >
                 <small>{msg.sender}</small>
@@ -157,40 +175,16 @@ function App() {
           <div ref={chatEndRef}></div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            padding: "15px",
-            borderTop: "1px solid #ddd",
-          }}
-        >
+        <div style={{ display: "flex", padding: "15px" }}>
           <input
-            type="text"
             value={message}
-            placeholder="Type message..."
             onChange={handleTyping}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: "10px",
-              border: "1px solid #ccc",
-              outline: "none",
-            }}
+            placeholder="Type message..."
+            style={{ flex: 1, padding: "12px" }}
           />
 
-          <button
-            onClick={sendMessage}
-            style={{
-              marginLeft: "10px",
-              padding: "12px 20px",
-              background: "#4f46e5",
-              color: "white",
-              border: "none",
-              borderRadius: "10px",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={sendMessage} style={{ marginLeft: "10px" }}>
             Send
           </button>
         </div>
