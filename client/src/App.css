@@ -233,6 +233,11 @@ body {
   background: var(--border-color);
 }
 
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -356,6 +361,16 @@ body {
 
 .chat-input-row button:hover {
   background: var(--accent-hover);
+}
+
+/* ---------- Image messages ---------- */
+.message-image {
+  max-width: 240px;
+  max-height: 280px;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 4px;
+  object-fit: cover;
 }
 
 /* ---------- Responsive ---------- */
