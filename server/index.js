@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
+const path = require("path");
 const Message = require("./models/Message");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -40,6 +42,8 @@ app.use(cors({ origin: CLIENT_URL }));
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/messages", messageRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 mongoose
   .connect(MONGO_URI)
@@ -61,7 +65,7 @@ io.use((socket, next) => {
   if (!token) return next(new Error("No token provided"));
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     socket.username = decoded.name;
     next();
   } catch (err) {
@@ -74,10 +78,15 @@ io.on("connection", (socket) => {
 
   socket.on("send_message", async (data) => {
     const sender = socket.username;
-    const text = typeof data.text === "string" ? data.text.trim() : "";
+    const text =
+      typeof data.text === "string"
+        ? data.text.trim()
+        : data.text && typeof data.text.text === "string"
+        ? data.text.text.trim()
+        : "";
 
     if (!text) {
-      console.warn("Ignored empty message from:", sender);
+      console.warn("Ignored invalid message payload:", data);
       return;
     }
 
@@ -95,8 +104,8 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("typing", () => {
-    socket.broadcast.emit("show_typing", socket.username);
+  socket.on("typing", (username) => {
+    socket.broadcast.emit("show_typing", username);
   });
 
   socket.on("stop_typing", () => {
@@ -104,7 +113,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.username, socket.id);
+    console.log("User disconnected:", socket.id);
   });
 });
 
