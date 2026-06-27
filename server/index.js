@@ -59,7 +59,6 @@ app.get("/", (req, res) => {
   res.send("Chat server running...");
 });
 
-// Verify the JWT on every socket connection so usernames can't be faked
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error("No token provided"));
@@ -78,25 +77,22 @@ io.on("connection", (socket) => {
 
   socket.on("send_message", async (data) => {
     const sender = socket.username;
-    const text =
-      typeof data.text === "string"
-        ? data.text.trim()
-        : data.text && typeof data.text.text === "string"
-        ? data.text.text.trim()
-        : "";
+    const text = typeof data.text === "string" ? data.text.trim() : "";
+    const imageUrl = typeof data.imageUrl === "string" ? data.imageUrl : "";
 
-    if (!text) {
-      console.warn("Ignored invalid message payload:", data);
+    if (!text && !imageUrl) {
+      console.warn("Ignored empty message from:", sender);
       return;
     }
 
     try {
-      const newMessage = new Message({ sender, text });
+      const newMessage = new Message({ sender, text, imageUrl });
       await newMessage.save();
 
       io.emit("receive_message", {
         sender,
         text,
+        imageUrl,
         createdAt: newMessage.createdAt,
       });
     } catch (error) {
@@ -104,8 +100,8 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("typing", (username) => {
-    socket.broadcast.emit("show_typing", username);
+  socket.on("typing", () => {
+    socket.broadcast.emit("show_typing", socket.username);
   });
 
   socket.on("stop_typing", () => {
@@ -113,7 +109,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("User disconnected:", socket.username, socket.id);
   });
 });
 
