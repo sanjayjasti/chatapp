@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const groupRoutes = require("./routes/groupRoutes");
+const userRoutes = require("./routes/userRoutes");
 const path = require("path");
 const Message = require("./models/Message");
 const http = require("http");
@@ -45,6 +46,7 @@ app.use("/api/auth", authRoutes);
 app.use("/messages", messageRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/groups", groupRoutes);
+app.use("/api/users", userRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 mongoose
