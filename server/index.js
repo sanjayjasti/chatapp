@@ -102,6 +102,41 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("join_group", (groupId) => {
+    socket.join(`group_${groupId}`);
+  });
+
+  socket.on("send_group_message", async (data) => {
+    const sender = socket.username;
+    const text = typeof data.text === "string" ? data.text.trim() : "";
+    const imageUrl = typeof data.imageUrl === "string" ? data.imageUrl : "";
+    const groupId = data.groupId;
+
+    if (!groupId) {
+      console.warn("Ignored group message with no groupId");
+      return;
+    }
+    if (!text && !imageUrl) {
+      console.warn("Ignored empty group message from:", sender);
+      return;
+    }
+
+    try {
+      const newMessage = new Message({ sender, text, imageUrl, groupId });
+      await newMessage.save();
+
+      io.to(`group_${groupId}`).emit("receive_group_message", {
+        sender,
+        text,
+        imageUrl,
+        groupId,
+        createdAt: newMessage.createdAt,
+      });
+    } catch (error) {
+      console.error("Failed to save group message:", error);
+    }
+  });
+
   socket.on("typing", () => {
     socket.broadcast.emit("show_typing", socket.username);
   });
